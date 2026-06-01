@@ -1,6 +1,8 @@
 # Poppy — content strategist demo
 
-A chat that batches its clarifying questions, runs parallel research tools, and writes a final voice-matched response over the year's top-performing videos in the user's niche. Built for the Poppy AI take-home — ~500 LOC of app code across 14 files (excluding shadcn primitives).
+A chat that batches its clarifying questions, runs parallel research tools, and writes a final voice-matched response over the year's top-performing videos in the user's niche.
+
+**Live demo:** https://poppy-ai-prototype.vercel.app/
 
 ## What it does
 
