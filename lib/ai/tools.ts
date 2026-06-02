@@ -34,6 +34,12 @@ export const tools = {
               .string()
               .optional()
               .describe('Optional hint shown inside the answer field'),
+            options: z
+              .array(z.string())
+              .optional()
+              .describe(
+                'Optional predefined choices rendered as numbered rows. Use for questions with a small, known set of answers (e.g. content format). Omit for open-ended questions like URLs or free-text descriptions.',
+              ),
           }),
         )
         .min(1),
@@ -75,11 +81,15 @@ export const tools = {
     inputSchema: z.object({
       query: z
         .string()
-        .describe('Search query, e.g. "how to lose belly fat fitness tips"'),
+        .describe('Search query, e.g. "how to lose belly fat fitness tutorial"'),
       count: z.number().int().min(1).max(20).default(20),
+      duration: z
+        .enum(['long', 'short', 'any'])
+        .default('long')
+        .describe('Filter by video length: long = 20+ min, short = under 4 min, any = no filter. Default to long unless the user asked for short-form content.'),
     }),
-    execute: async ({ query, count }): Promise<ContentMatch[]> => {
-      const videos = await searchYouTube(query, count);
+    execute: async ({ query, count, duration }): Promise<ContentMatch[]> => {
+      const videos = await searchYouTube(query, count, duration);
       return Promise.all(
         videos.map(async (v) => {
           try {

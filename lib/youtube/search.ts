@@ -42,6 +42,7 @@ function yearStartIso() {
 export async function searchYouTube(
   query: string,
   count: number,
+  duration: 'long' | 'short' | 'any' = 'long',
 ): Promise<YouTubeVideo[]> {
   const apiKey = process.env.YOUTUBE_API_KEY;
   if (!apiKey) throw new Error('YOUTUBE_API_KEY is not set');
@@ -54,6 +55,7 @@ export async function searchYouTube(
     order: 'viewCount',
     publishedAfter: yearStartIso(),
     maxResults: String(Math.min(Math.max(count, 1), 50)),
+    videoDuration: duration,
   });
   const searchRes = await fetch(`${SEARCH_URL}?${searchParams}`);
   if (!searchRes.ok) {

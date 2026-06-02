@@ -6,12 +6,18 @@ import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
+import { ChevronLeft, ChevronRight, Pencil, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Message } from './message';
 import type { AppUIMessage } from '@/lib/ai/types';
 
-type Question = { id: string; question: string; placeholder?: string };
+type Question = {
+  id: string;
+  question: string;
+  placeholder?: string;
+  options?: string[];
+};
 type Pending = { toolCallId: string; questions: Question[] };
 type LocalState = {
   toolCallId: string;
@@ -26,6 +32,7 @@ export function Chat() {
     experimental_throttle: 50,
   });
   const [input, setInput] = useState('');
+  const [cardInput, setCardInput] = useState('');
   const [local, setLocal] = useState<LocalState | null>(null);
 
   const busy = status === 'streaming' || status === 'submitted';
@@ -64,33 +71,58 @@ export function Chat() {
       ? pending.questions[local.index]
       : null;
 
+  const submitAnswer = (answer: string) => {
+    if (!pending || !local || !currentQuestion || busy) return;
+    const answers = [...local.answers, { id: currentQuestion.id, answer }];
+    const nextIndex = local.index + 1;
+    if (nextIndex >= pending.questions.length) {
+      addToolOutput({
+        tool: 'askUser',
+        toolCallId: pending.toolCallId,
+        output: { answers },
+      });
+      setLocal(null);
+    } else {
+      setLocal({ ...local, index: nextIndex, answers });
+    }
+    setCardInput('');
+    setInput('');
+  };
+
+  const goBack = () => {
+    if (!local || local.index === 0) return;
+    setLocal({ ...local, index: local.index - 1, answers: local.answers.slice(0, -1) });
+  };
+
+  const skipAll = () => {
+    if (!pending || !local) return;
+    const answered = [...local.answers];
+    for (let i = local.index; i < pending.questions.length; i++) {
+      answered.push({ id: pending.questions[i].id, answer: '' });
+    }
+    addToolOutput({
+      tool: 'askUser',
+      toolCallId: pending.toolCallId,
+      output: { answers: answered },
+    });
+    setLocal(null);
+    setCardInput('');
+    setInput('');
+  };
+
   const submit = () => {
     const text = input.trim();
     if (!text || busy) return;
-
     if (pending && local && currentQuestion) {
-      const answers = [...local.answers, { id: currentQuestion.id, answer: text }];
-      const nextIndex = local.index + 1;
-      if (nextIndex >= pending.questions.length) {
-        addToolOutput({
-          tool: 'askUser',
-          toolCallId: pending.toolCallId,
-          output: { answers },
-        });
-        setLocal(null);
-      } else {
-        setLocal({ ...local, index: nextIndex, answers });
-      }
+      submitAnswer(text);
     } else {
       sendMessage({ text });
     }
     setInput('');
   };
 
-  const progress =
-    pending && local
-      ? `${Math.min(local.index + 1, pending.questions.length)} of ${pending.questions.length}`
-      : null;
+  const total = pending?.questions.length ?? 0;
+  const currentIdx = local?.index ?? 0;
 
   return (
     <div className="mx-auto flex h-full max-w-3xl flex-col px-4">
@@ -98,7 +130,7 @@ export function Chat() {
         {messages.length === 0 && (
           <div className="mt-20 text-center text-muted-foreground">
             <p className="text-lg">
-              Try: <em>“I want to create YouTube content in fitness niche”</em>
+              Try: <em>"I want to create YouTube content in fitness niche"</em>
             </p>
           </div>
         )}
@@ -109,13 +141,84 @@ export function Chat() {
 
       <div className="space-y-2 border-t pb-6 pt-4">
         {currentQuestion && (
-          <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">
-            <div className="mb-0.5 text-xs uppercase tracking-wide text-muted-foreground">
-              Question {progress}
+          <div className="overflow-hidden rounded-xl border bg-card shadow-md">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4 px-4 py-3">
+              <p className="text-sm font-medium leading-snug">
+                {currentQuestion.question}
+              </p>
+              <div className="flex shrink-0 items-center gap-0.5 text-muted-foreground">
+                <button
+                  onClick={goBack}
+                  disabled={currentIdx === 0}
+                  className="rounded p-1 hover:bg-muted disabled:opacity-30"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </button>
+                <span className="px-1 text-xs tabular-nums">
+                  {currentIdx + 1} of {total}
+                </span>
+                <button disabled className="rounded p-1 opacity-30">
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={skipAll}
+                  className="ml-1 rounded p-1 hover:bg-muted"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
-            {currentQuestion.question}
+
+            {/* Numbered options */}
+            {currentQuestion.options && currentQuestion.options.length > 0 && (
+              <div className="border-t">
+                {currentQuestion.options.map((opt, i) => (
+                  <button
+                    key={i}
+                    onClick={() => submitAnswer(opt)}
+                    className="flex w-full items-center gap-3 border-b px-4 py-2.5 text-left text-sm transition-colors last:border-b-0 hover:bg-muted"
+                  >
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-muted text-xs font-medium">
+                      {i + 1}
+                    </span>
+                    <span className="flex-1">{opt}</span>
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Free-text row */}
+            <div className="flex items-center gap-2 border-t px-3 py-2">
+              <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <input
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                placeholder={
+                  currentQuestion.options?.length
+                    ? 'Something else…'
+                    : (currentQuestion.placeholder ?? 'Type your answer…')
+                }
+                value={cardInput}
+                onChange={(e) => setCardInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (cardInput.trim()) submitAnswer(cardInput.trim());
+                  }
+                }}
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => submitAnswer('')}
+              >
+                Skip
+              </Button>
+            </div>
           </div>
         )}
+
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -133,16 +236,13 @@ export function Chat() {
               }
             }}
             placeholder={
-              currentQuestion?.placeholder ??
-              (currentQuestion
-                ? 'Type your answer…'
-                : 'What do you want to create today?')
+              currentQuestion ? 'Or reply directly…' : 'What do you want to create today?'
             }
             className="resize-none"
             rows={2}
           />
           <Button type="submit" disabled={busy || !input.trim()}>
-            {currentQuestion ? 'Answer' : 'Send'}
+            Send
           </Button>
         </form>
       </div>
