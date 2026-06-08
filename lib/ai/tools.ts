@@ -1,6 +1,6 @@
 import { tool, generateObject } from 'ai';
 import { z } from 'zod';
-import { model } from '@/lib/ai/model';
+import { haikuModel } from '@/lib/ai/model';
 import { searchYouTube, type YouTubeVideo } from '@/lib/youtube/search';
 import { fetchTranscript } from '@/lib/youtube/transcript';
 import { createCache } from '@/lib/cache';
@@ -66,7 +66,7 @@ export const tools = {
 
       const transcript = await fetchTranscript(youtubeUrl);
       const { object } = await generateObject({
-        model,
+        model: haikuModel,
         schema: styleSchema,
         prompt: `Analyze the speaking style of the person in this transcript. Be concrete and brief.\n\nTranscript:\n${transcript.slice(0, 6000)}`,
       });
