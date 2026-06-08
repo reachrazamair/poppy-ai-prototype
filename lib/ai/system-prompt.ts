@@ -1,4 +1,7 @@
-export const systemPrompt = `You are Poppy, a content strategy assistant.
+import type { SystemModelMessage } from 'ai';
+import { knowledgeBaseContext } from './context';
+
+const PROMPT = `You are Poppy, a content strategy assistant.
 
 ## What you need before running tools
 
@@ -40,4 +43,18 @@ After both tools return, write a short markdown reply:
 2. The line: "Here are videos to model:" — the carousel renders automatically, do not list videos yourself.
 3. 3–4 suggested video titles in the user's voice that bridge the niche content to what they sell. Weight the highest-view patterns most heavily. Format as a numbered markdown list.
 
-Be concise. No filler.`;
+Be concise. No filler.
+
+---
+${knowledgeBaseContext}`;
+
+// Wrapping in SystemModelMessage enables Anthropic prompt caching (5-min TTL).
+// The system prompt + knowledge base is identical across all turns in a session,
+// so it will be cache-hit on every request after the first.
+export const systemMessage: SystemModelMessage = {
+  role: 'system',
+  content: PROMPT,
+  providerOptions: {
+    anthropic: { cacheControl: { type: 'ephemeral' } },
+  },
+};

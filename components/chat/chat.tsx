@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import {
   DefaultChatTransport,
@@ -10,6 +10,7 @@ import { ChevronLeft, ChevronRight, Pencil, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Message } from './message';
+import { UsagePanel } from './usage-panel';
 import type { AppUIMessage } from '@/lib/ai/types';
 
 type Question = {
@@ -34,8 +35,18 @@ export function Chat() {
   const [input, setInput] = useState('');
   const [cardInput, setCardInput] = useState('');
   const [local, setLocal] = useState<LocalState | null>(null);
+  const [usageTrigger, setUsageTrigger] = useState(0);
+  const prevStatus = useRef(status);
 
   const busy = status === 'streaming' || status === 'submitted';
+
+  // Trigger usage fetch when the AI finishes a full response
+  useEffect(() => {
+    if (prevStatus.current !== status && status === 'ready' && messages.length > 0) {
+      setUsageTrigger((t) => t + 1);
+    }
+    prevStatus.current = status;
+  }, [status, messages.length]);
 
   const pending = useMemo<Pending | null>(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -140,6 +151,8 @@ export function Chat() {
       </div>
 
       <div className="space-y-2 border-t pb-6 pt-4">
+        <UsagePanel trigger={usageTrigger} />
+
         {currentQuestion && (
           <div className="overflow-hidden rounded-xl border bg-card shadow-md">
             {/* Header */}
