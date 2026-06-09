@@ -7,7 +7,6 @@ export interface StepUsage {
   toolCalls: string[];
 }
 
-// In-memory store — fine for a single-process dev server. Production would use Redis.
 const state: { data: StepUsage[] } = { data: [] };
 
 export const usageStore = {

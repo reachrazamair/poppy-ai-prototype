@@ -48,9 +48,6 @@ Be concise. No filler.
 ---
 ${knowledgeBaseContext}`;
 
-// Wrapping in SystemModelMessage enables Anthropic prompt caching (5-min TTL).
-// The system prompt + knowledge base is identical across all turns in a session,
-// so it will be cache-hit on every request after the first.
 export const systemMessage: SystemModelMessage = {
   role: 'system',
   content: PROMPT,
