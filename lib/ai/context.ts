@@ -1,5 +1,3 @@
-// Simulates a real Poppy user's connected knowledge base (landing page + brand docs).
-// In production this would be retrieved from the user's connected sources.
 export const knowledgeBaseContext = `
 ## Connected Knowledge Base
 
